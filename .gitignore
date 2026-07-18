@@ -1,0 +1,23 @@
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# RStudio
+*.Rproj
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
+# Output folders
+output/
+
+# OS files
+.DS_Store
