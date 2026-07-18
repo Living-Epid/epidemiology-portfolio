@@ -2,18 +2,10 @@
 # Living-Epid Epidemiology Portfolio Setup
 # Author : Taiwo Adegbola
 # GitHub : https://github.com/Living-Epid
-# Version: 1.0
-# Purpose: Creates the top-level folder structure for the
-#          Epidemiology Portfolio.
+# Version: 2.0
 # =====================================================
 
-Write-Host ""
-Write-Host "========================================="
-Write-Host " Living-Epid Portfolio Setup v1.0"
-Write-Host "========================================="
-Write-Host ""
-
-# Create top-level portfolio folders
+$repoRoot = Split-Path $PSScriptRoot -Parent
 
 $folders = @(
     "01_Foundations",
@@ -32,9 +24,18 @@ $folders = @(
 )
 
 foreach ($folder in $folders) {
-    New-Item -ItemType Directory -Name $folder -Force | Out-Null
-    Write-Host "Created: $folder"
+
+    $path = Join-Path $repoRoot $folder
+
+    if (!(Test-Path $path)) {
+        New-Item -ItemType Directory -Path $path | Out-Null
+        Write-Host "Created: $folder"
+    }
+    else {
+        Write-Host "$folder already exists."
+    }
+
 }
 
 Write-Host ""
-Write-Host "Portfolio structure created successfully!"
+Write-Host "Portfolio setup complete!"
