@@ -1,0 +1,294 @@
+---
+title: "Case Study 001 — State DPT3 Coverage Verification Using a One-Sample t-Test"
+author: html
+format: html
+editor: visual
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: flatly
+---
+
+## 1. Background
+
+Diphtheria, pertussis, and tetanus (DPT) remain vaccine-preventable diseases of major public health importance, particularly among children under five years of age. Achieving and sustaining high coverage with the third dose of the DPT-containing vaccine (DPT3) is widely used as a key indicator of the performance of routine immunization programmes.
+
+The World Health Organization (WHO) recommends that countries achieve **at least 90% national DPT3 coverage** to provide adequate population-level protection and reduce the risk of outbreaks of vaccine-preventable diseases. Failure to attain this benchmark may indicate gaps in vaccine delivery, inequitable access to immunization services, or weaknesses in health system performance.
+
+Despite ongoing efforts to strengthen routine immunization in Nigeria, substantial variation in DPT3 coverage persists across states. Understanding whether the observed average state-level coverage differs from the WHO-recommended target is important for evaluating programme performance and informing national immunization strategies.
+
+This study uses state-level DPT3 coverage data to assess whether Nigeria's mean DPT3 coverage is statistically consistent with the WHO target of 90%.
+
+## 2. Epidemiologic Question
+
+**Is the average DPT3 vaccination coverage across Nigerian states statistically different from the WHO-recommended national target of 90%?**
+
+## 3. Objective
+
+To evaluate whether the mean DPT3 vaccination coverage across Nigerian states is statistically different from the WHO-recommended national coverage target of 90%.
+
+## 4. Statistical method
+
+**Method:** One-Sample t-test
+
+**Rationale:** A one-sample t-test is appropriate because the analysis compares the mean DPT3 coverage from a single sample of Nigerian states with a fixed reference value (the WHO target of 90%).
+
+## 5. Reference value
+
+The reference value for this analysis is the **World Health Organization (WHO) recommended DPT3 immunization coverage target of 90%**, which is considered the minimum coverage required to achieve population-level (herd) immunity against diphtheria, pertussis, and tetanus. This benchmark serves as the hypothesized population mean against which the observed state-level DPT3 coverage is statistically evaluated.
+
+## 6. Data source
+
+State-level DPT3 vaccination coverage data were compiled from published secondary sources.
+
+Three state-specific coverage estimates—**Ebonyi (98.7%)**, **Sokoto (11.5%)**, and the **Federal Capital Territory (79.6%)**—were obtained directly from **Olulaja & Jaber (2026, *Public Health Challenges*)** and independently corroborated using **Tribune Online**.
+
+The published report also confirmed that the following seven states achieved **≥80%** DPT3 coverage:
+
+- Ebonyi, Enugu, Imo, Ekiti, Lagos, Edo, Osun
+
+and that the following seven states recorded **\<50%** coverage:
+
+- Sokoto, Zamfara, Borno, Bauchi, Gombe, Niger, Katsina
+
+Because complete state-specific coverage estimates for the remaining **23 states** were not publicly available, their values were **synthetically generated** within the reported coverage bands while preserving the published national mean of approximately **56%**. The resulting dataset therefore satisfies all published constraints but does **not** represent official surveillance records.
+
+Actual district (LGA)-level DPT3 coverage data are maintained within the Nigerian **District Health Information System 2 (DHIS2)** and are not publicly accessible.
+
+Accordingly, this dataset should be regarded as a **synthetic dataset calibrated to verified published statistics** and is intended solely to demonstrate epidemiologic and statistical methodology. Findings should therefore be interpreted as **illustrative of analytical methods rather than official programmatic estimates or surveillance conclusions**.
+
+```{r libraries}
+
+library(tidyverse)
+library(janitor)
+library(rio)
+library(broom)
+library(gt)
+library(here)
+```
+
+```{r load-data}
+
+# State-level DPT3 vaccination coverage data -from published secondary sources
+
+dpt3_coverage <- import("dpt3_state_coverage_v2.csv") |> janitor::clean_names()
+dpt3_coverage
+```
+
+```{r WHO-target}
+
+dpt3_coverage <- dpt3_coverage |>
+  mutate(
+    who_target = if_else(
+      dpt3_coverage_percent >= 90,
+      "Met Target",
+      "Below Target"
+    )
+  )
+```
+
+```{r Descriptive Statistics}
+
+
+dpt3_summary <- dpt3_coverage |>
+  summarise(
+    Number_of_States = n(),
+    Mean_Coverage = mean(dpt3_coverage_percent),
+    Standard_Deviation = sd(dpt3_coverage_percent),
+    Minimum_Coverage = min(dpt3_coverage_percent),
+    Maximum_Coverage = max(dpt3_coverage_percent)
+  )
+
+dpt3_summary
+
+
+ggplot(
+  dpt3_coverage,
+  aes(
+    x = reorder(state, dpt3_coverage_percent),
+    y = dpt3_coverage_percent,
+    fill = who_target
+  )
+) +
+  geom_col(width = 0.8) +
+  
+  geom_hline(
+    yintercept = 90,
+    colour = "red3",
+    linewidth = 1.2,
+    linetype = "dashed"
+  ) +
+  
+  coord_flip() +
+  
+  scale_fill_manual(
+    values = c(
+      "Met Target" = "#238B45",
+      "Below Target" = "#8FBBD9"
+    )
+  ) +
+  
+  labs(
+    title = "State-level DPT3 Vaccination Coverage",
+    subtitle = "Comparison with WHO Recommended Coverage Target (90%)",
+    x = NULL,
+    y = "DPT3 Coverage (%)",
+    fill = NULL,
+    caption = paste(
+      "Source: Synthetic dataset calibrated to published DPT3 coverage statistics",
+      "(Olulaja & Jaber, 2026).",
+      "Red dashed line indicates the WHO recommended target (90%)."
+    )
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    plot.caption = element_text(size = 9, colour = "grey40"),
+    panel.grid.minor = element_blank(),
+    legend.position = "right"
+  )
+  
+
+# Create a North/South region variable from your existing Zone column
+
+dpt3_coverage <- dpt3_coverage %>%
+  mutate(region = case_when(
+    zone %in% c("North Central", "North East", "North West") ~ "North",
+    zone %in% c("South East", "South South", "South West") ~ "South"
+  ))
+
+# Labeled, ordered bar chart
+library(ggplot2)
+
+ggplot(dpt3_coverage, aes(x = reorder(state, dpt3_coverage_percent),
+                          y = dpt3_coverage_percent, fill = region)) +
+  geom_col() +
+  geom_hline(yintercept = 90, linetype = "dashed", color = "red") +
+  coord_flip() +
+  labs(
+    title = "DPT3 Coverage by State, Ordered Low to High",
+    subtitle = "Red dashed line = WHO 90% threshold",
+    x = "State", y = "DPT3 Coverage (%)"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r Checking the one-sample t-test assumptions}
+
+# Shapiro-Wilk Test
+
+shapiro.test(dpt3_coverage$dpt3_coverage_percent)
+
+# Q-Q Plot
+ggplot(
+  dpt3_coverage,
+  aes(sample = dpt3_coverage_percent)
+) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  labs(
+    title = "Normal Q-Q Plot of DPT3 Coverage"
+  ) +
+  theme_minimal()
+
+# Histogram
+
+ggplot(
+  dpt3_coverage,
+  aes(x = dpt3_coverage_percent)
+) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 10,
+    fill = "#2C7FB8",
+    colour = "white",
+    alpha = 0.7
+  ) +
+  
+  geom_density(
+    colour = "red",
+    linewidth = 1.2
+  ) +
+  
+  labs(
+    title = "Distribution of State-level DPT3 Coverage",
+    subtitle = "Histogram with kernel density estimate",
+    x = "DPT3 Coverage (%)",
+    y = "Density"
+  ) +
+  
+  theme_minimal(base_size = 13)
+
+```
+
+```{r- Hypotheses}
+
+Null hypothesis (H₀):
+
+The mean DPT3 vaccination coverage across Nigerian states is equal to the WHO-recommended target of 90%.
+
+                                H1: μ = 90%
+
+Alternative hypothesis (H₁):
+
+The mean DPT3 vaccination coverage across Nigerian states is different from the WHO-recommended target of 90%.
+
+                              H1: μ ≠ 90%
+```
+
+```{r t-test}
+  t_result <- t.test(dpt3_coverage$dpt3_coverage_percent, mu = 90, alternative = "two.sided")
+  t_result
+
+```
+
+```{r tidy-output}
+
+broom::tidy(t_result) %>%
+  select(estimate, statistic, p.value, conf.low, conf.high) %>%
+  mutate(across(where(is.numeric), ~round(.x, 2)))
+```
+
+```{r-results}
+
+A one-sample t-test was conducted to determine whether the mean DPT3 vaccination coverage across Nigerian states differed significantly from the WHO-recommended target of 90%.
+
+The analysis showed that the mean DPT3 coverage (55.1%) was significantly lower than the WHO target of 90% (t(36) = −8.09, p = 1.304 × 10⁻⁹).
+
+The 95% confidence interval for the population mean DPT3 coverage ranged from 46.35% to 63.85%, which does not include the WHO target of 90%.
+
+Therefore, the null hypothesis was rejected. There is sufficient statistical evidence to conclude that the mean DPT3 vaccination coverage across Nigerian states is significantly different from the WHO-recommended target of 90%.
+
+```
+
+```{r-interpretaion}
+
+A one-sample t-test indicated that mean DPT3 coverage across Nigerian states (M = 55.1%, SD = 26.25) was significantly lower than the WHO-recommended threshold of 90%, t(36) = −8.09, p < .001, 95% CI [46.35, 63.85], d = −1.33. This represents a large effect, suggesting that routine childhood immunization coverage remains inadequate in many Nigerian states, and, on average, states fall substantially short of the coverage needed to sustain population-level immunity against diphtheria, pertussis, and tetanus.
+```
+
+```{r}
+
+wilcox.test(
+  dpt3_coverage_percent ~ region,
+  data = dpt3_coverage
+)
+```
+
+```{The DPT3 coverage data appear bimodal, reflecting two distinct regional clusters rather than a single approximately normal population.}
+
+Null hypothesis (H₀):
+  
+  There is no difference in the distribution of DPT3 coverage between the North and South (location shift = 0).
+
+Alternative hypothesis (H₁):
+  
+  The distributions of DPT3 coverage differ between the North and South (location shift ≠ 0).
+
+```

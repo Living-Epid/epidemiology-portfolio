@@ -1,0 +1,38 @@
+State,Zone,DPT3_Coverage_Percent,Source
+Abia,South East,74.1,Simulated (zone-calibrated)
+Adamawa,North East,18.5,Simulated (zone-calibrated)
+Akwa Ibom,South South,62.5,Simulated (zone-calibrated)
+Anambra,South East,97,Simulated (zone-calibrated)
+Bauchi,North East,24.6,Simulated within confirmed published band
+Bayelsa,South South,48.5,Simulated (zone-calibrated)
+Benue,North Central,39.7,Simulated (zone-calibrated)
+Borno,North East,18.3,Simulated within confirmed published band
+Cross River,South South,58.9,Simulated (zone-calibrated)
+Delta,South South,40.1,Simulated (zone-calibrated)
+Ebonyi,South East,98.7,Published (exact) - Olulaja & Jaber 2026
+Edo,South South,96.6,Simulated within confirmed published band
+Ekiti,South West,87.5,Simulated within confirmed published band
+Enugu,South East,81.3,Simulated within confirmed published band
+FCT Abuja,North Central,79.6,Published (exact) - Olulaja & Jaber 2026
+Gombe,North East,32.0,Simulated within confirmed published band
+Imo,South East,93.3,Simulated within confirmed published band
+Jigawa,North West,34.7,Simulated (zone-calibrated)
+Kaduna,North West,16.7,Simulated (zone-calibrated)
+Kano,North West,48.5,Simulated (zone-calibrated)
+Katsina,North West,41.7,Simulated within confirmed published band
+Kebbi,North West,33.5,Simulated (zone-calibrated)
+Kogi,North Central,44.3,Simulated (zone-calibrated)
+Kwara,North Central,51.1,Simulated (zone-calibrated)
+Lagos,South West,92.3,Simulated within confirmed published band
+Nasarawa,North Central,43.4,Simulated (zone-calibrated)
+Niger,North Central,37.7,Simulated within confirmed published band
+Ogun,South West,69.8,Simulated (zone-calibrated)
+Ondo,South West,66.6,Simulated (zone-calibrated)
+Osun,South West,89.2,Simulated within confirmed published band
+Oyo,South West,84.7,Simulated (zone-calibrated)
+Plateau,North Central,43.6,Simulated (zone-calibrated)
+Rivers,South South,73.5,Simulated (zone-calibrated)
+Sokoto,North West,11.5,Published (exact) - Olulaja & Jaber 2026
+Taraba,North East,38.5,Simulated (zone-calibrated)
+Yobe,North East,34.2,Simulated (zone-calibrated)
+Zamfara,North West,32.0,Simulated within confirmed published band
