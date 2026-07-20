@@ -1,0 +1,201 @@
+---
+title: "Sex Differences in BMI Across the WHO African Region"
+author: "Taiwo Adegbola"
+format: html
+editor: visual
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: flatly
+---
+
+## 1. Background
+
+Body Mass Index (BMI) is a widely used indicator of nutritional and metabolic health status, with sex-based differences well documented across populations globally. In the WHO African Region, rising rates of overweight and obesity have emerged alongside persistent undernutrition, creating a "double burden of malnutrition" that complicates public health planning across the continent.
+
+Sex differences in body composition — driven by a combination of biological factors (hormonal profiles, fat distribution patterns, muscle mass) and social/behavioral factors (dietary patterns, physical activity norms, healthcare-seeking behavior) — are consistently observed in nutritional epidemiology. Understanding the magnitude and consistency of this difference at a regional scale is relevant for designing sex-responsive nutrition and NCD (non-communicable disease) prevention programs, particularly as WHO African Region countries increasingly confront overweight/obesity alongside historically dominant concerns like childhood undernutrition.
+
+Agboyibor et al. (2026) analyzed pooled data from 54 WHO STEPS surveys conducted across 36 African countries between 2003 and 2022, representing approximately 198,901 adults, to characterize BMI trends and associated factors across the region. Their findings reported a statistically significant sex difference in mean BMI, with women showing higher average BMI than men. This case study uses that published finding as the basis for an independent samples t-test exercise, examining whether this sex difference holds up to formal hypothesis testing and quantifying its practical significance via effect size.
+
+## 2. Public Health Question
+
+Do adult women in the WHO African Region have a significantly different mean BMI than adult men?
+
+## 3. Objective
+
+To determine whether mean BMI differs significantly between adult women and men in the WHO African Region.
+
+## 4. Data source
+
+**Study:** Agboyibor et al. (2026), *BMJ Global Health*
+
+**Original data:** Pooled analysis of 54 WHO STEPS (STEPwise approach to NCD risk factor Surveillance) surveys conducted across 36 WHO African Region member countries between 2003 and 2022, representing approximately 198,901 adults aged 18–69 years.
+
+**Published summary statistics used in this case study:**
+
+| Group | Mean BMI (kg/m²) | SD   | Reported n                 |
+|-------|------------------|------|----------------------------|
+| Women | 24.23            | 1.60 | \~100,047 (50.3% of total) |
+| Men   | 22.11            | 1.53 | \~98,854                   |
+
+**Data transparency note:** The published study reports only aggregated summary statistics (means, standard deviations, sample sizes) — raw individual-level survey microdata is not publicly available. For this case study, a **simulated dataset (n=1,500 per group, 3,000 total)** was generated to closely reproduce the published means and standard deviations, enabling hands-on independent samples t-test practice at a manageable scale. This is a calibrated simulation anchored to real, published findings — not a reproduction of actual WHO STEPS survey data.
+
+## 5. Statistical method
+
+Independent Samples t-test
+
+```{r libraries}
+
+library(tidyverse)
+library(rio)
+library(here)
+library(janitor)
+library(broom)
+library(gt)
+```
+
+```{r data import}
+
+bmi_data <- import("africa_bmi_sex_comparison.csv")
+bmi_data
+
+```
+
+```{r variables class}
+
+str(bmi_data)
+glimpse(bmi_data)
+```
+
+```{r descriptives}
+
+bmi_summary <- bmi_data |>
+  summarise(
+    Number_of_Participants = n(),
+    Mean_bmi = mean(bmi, na.rm = TRUE),
+    SD_bmi = sd(bmi, na.rm = TRUE),
+    Min_bmi = min(bmi, na.rm = TRUE),
+    Max_bmi = max(bmi, na.rm = TRUE)
+  )
+
+bmi_summary
+
+
+
+bmi_summary <- bmi_data |>
+  group_by(sex) |>
+  summarise(
+    Number_of_Participants = n(),
+    Mean_BMI = mean(bmi, na.rm = TRUE),
+    SD_BMI = sd(bmi, na.rm = TRUE),
+    Minimum_BMI = min(bmi, na.rm = TRUE),
+    Maximum_BMI = max(bmi, na.rm = TRUE)
+  )
+
+bmi_summary
+```
+
+```{r exploratory data analysis}
+
+ggplot(bmi_data, aes(x = bmi, fill = sex)) +
+  geom_histogram(
+    bins = 20,
+    alpha = 0.6,
+    position = "identity"
+  ) +
+  facet_wrap(~sex) +
+  labs(
+    title = "Distribution of BMI by Sex",
+    x = "Body Mass Index (kg/m²)",
+    y = "Frequency"
+  ) +
+  theme_minimal()
+
+
+
+
+ggplot(bmi_data,
+       aes(x = sex,
+           y = bmi,
+           fill = sex)) +
+  geom_boxplot(width = 0.6) +
+  labs(
+    title = "BMI Distribution by Sex",
+    x = "Sex",
+    y = "BMI (kg/m²)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+
+
+ggplot(bmi_data,
+       aes(x = bmi,
+           colour = sex,
+           fill = sex)) +
+  geom_density(alpha = 0.3,
+               linewidth = 1) +
+  labs(
+    title = "Density Distribution of BMI by Sex",
+    x = "BMI (kg/m²)",
+    y = "Density"
+  ) +
+  theme_minimal()
+```
+
+```{r assumptions checks}
+
+
+shapiro.test(bmi_data$bmi[bmi_data$sex == 'Female'])
+shapiro.test(bmi_data$bmi[bmi_data$sex == 'Male'])
+
+
+library(car)
+leveneTest(bmi ~ sex, data = bmi_data)
+```
+
+```{r-hypotheses}
+
+Null Hypothesis ((H₀):
+
+The mean BMI among women is equal to the mean BMI among men.
+
+                       H1: μ Female = μ Male
+
+Alternative hypothesis (H₁):
+
+The mean BMI among women differs from the mean BMI among men.
+
+                              H1: μ Female ≠ μ Male
+
+```
+
+```{r welch t-test for independent samples}
+
+t.test(bmi ~ sex, data = bmi_data)
+
+
+
+```
+
+```{r effect size using cohens d}
+
+library(effectsize)
+
+cohens_d(bmi ~ sex, data = bmi_data)
+```
+
+## 6. Interpretation
+
+An independent samples t-test (**Welch's**) was conducted to compare BMI between women and men. Both groups met the assumption of normality (Female: [<strong>Shapiro–Wilk W = 0.998, p = .208</strong>]{.text-primary}; Male: [<strong>W = 0.999, p = .708</strong>]{.text-primary}). Levene's test indicated homogeneity of variances ([<strong>F(1, 2998) = 0.21</strong>]{.text-primary}, [<strong>p = .650</strong>]{.text-danger}). Although the assumption of equal variances was satisfied, Welch's t-test was retained because it performs comparably to the pooled Student's t-test when variances are equal while remaining robust if this assumption is violated.
+
+Women had a significantly higher mean BMI ([<strong>M = 24.14 kg/m²</strong>]{.text-success}, SD = 1.59) than men ([<strong>M = 22.06 kg/m²</strong>]{.text-success}, SD = 1.56), [<strong>t(2997) = 36.18</strong>]{.text-primary}, [<strong>p \< .001</strong>]{.text-danger}. The estimated mean difference was [<strong>2.08 kg/m²</strong>]{.text-success} ([<strong>95% CI: 1.96–2.19</strong>]{.text-danger}). The standardized effect size was [<strong>large (Cohen's d = 1.32)</strong>]{.text-success} ([<strong>95% CI: 1.24–1.40</strong>]{.text-danger}), indicating a substantial difference in BMI between women and men. These findings closely reproduce the published WHO STEPS regional estimates reported by [<strong>Agboyibor et al. (2026)</strong>]{.text-info} (Women: 24.23 ± 1.60 kg/m²; Men: 22.11 ± 1.53 kg/m²; [<strong>p \< .001</strong>]{.text-danger}).
+
+#### Statistical vs. Practical Significance
+
+Although the difference in mean BMI was [<strong>statistically significant</strong>]{.text-danger} and associated with a [<strong>large effect size (Cohen's d = 1.32)</strong>]{.text-success}, the density plots revealed considerable overlap between the BMI distributions of women and men. This indicates that many individual men and women have similar BMI values despite the higher average BMI observed among women.
+
+From a public health perspective, these findings suggest that [<strong>sex is an important population-level determinant of BMI</strong>]{.text-success}, but [<strong>should not be used in isolation to predict an individual's BMI or guide individual clinical decisions</strong>]{.text-warning}. Rather, BMI is influenced by multiple biological, behavioural, environmental, and socioeconomic factors that should be considered alongside sex when designing obesity prevention and control programmes.

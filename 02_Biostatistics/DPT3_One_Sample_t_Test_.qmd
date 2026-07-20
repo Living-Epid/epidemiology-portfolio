@@ -1,9 +1,9 @@
 ---
-title: "Case Study 001 — State DPT3 Coverage Verification Using a One-Sample t-Test"
-author: html
+title: "State DPT3 Coverage Verification"
+author: "Taiwo Adegbola"
 format: html
 editor: visual
-date: "`r Sys.Date()`"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
 output:
   html_document:
     toc: true
@@ -256,30 +256,27 @@ broom::tidy(t_result) %>%
   mutate(across(where(is.numeric), ~round(.x, 2)))
 ```
 
-```{r-results}
+## 7. Result
 
-A one-sample t-test was conducted to determine whether the mean DPT3 vaccination coverage across Nigerian states differed significantly from the WHO-recommended target of 90%.
+A one-sample t-test was conducted to determine whether the mean DPT3 vaccination coverage across Nigerian states differed significantly from the WHO-recommended target of [<strong>90%</strong>]{.text-info}.
 
-The analysis showed that the mean DPT3 coverage (55.1%) was significantly lower than the WHO target of 90% (t(36) = −8.09, p = 1.304 × 10⁻⁹).
+The analysis showed that the mean DPT3 coverage ([<strong>55.1%</strong>]{.text-success}) was significantly lower than the WHO target of [<strong>90%</strong>]{.text-info} ([<strong>t(36) = −8.09</strong>]{.text-primary}, [<strong>p = 1.304 × 10⁻⁹</strong>]{.text-danger}).
 
-The 95% confidence interval for the population mean DPT3 coverage ranged from 46.35% to 63.85%, which does not include the WHO target of 90%.
+The [<strong>95% confidence interval</strong>]{.text-danger} for the population mean DPT3 coverage ranged from [<strong>46.35%</strong>]{.text-danger} to [<strong>63.85%</strong>]{.text-danger}, which does not include the WHO target of [<strong>90%</strong>]{.text-info}.
 
-Therefore, the null hypothesis was rejected. There is sufficient statistical evidence to conclude that the mean DPT3 vaccination coverage across Nigerian states is significantly different from the WHO-recommended target of 90%.
+Therefore, the null hypothesis was rejected. There is sufficient statistical evidence to conclude that the mean DPT3 vaccination coverage across Nigerian states is significantly lower than the WHO-recommended coverage target of [<strong>90%</strong>]{.text-info}.
 
-```
+------------------------------------------------------------------------
 
-```{r-interpretaion}
+## Interpretation
 
-A one-sample t-test indicated that mean DPT3 coverage across Nigerian states (M = 55.1%, SD = 26.25) was significantly lower than the WHO-recommended threshold of 90%, t(36) = −8.09, p < .001, 95% CI [46.35, 63.85], d = −1.33. This represents a large effect, suggesting that routine childhood immunization coverage remains inadequate in many Nigerian states, and, on average, states fall substantially short of the coverage needed to sustain population-level immunity against diphtheria, pertussis, and tetanus.
-```
+A one-sample t-test indicated that the mean DPT3 vaccination coverage across Nigerian states ([<strong>M = 55.1%</strong>]{.text-success}, SD = 26.25) was significantly lower than the WHO-recommended coverage threshold of [<strong>90%</strong>]{.text-info} ([<strong>t(36) = −8.09</strong>]{.text-primary}, [<strong>p \< .001</strong>]{.text-danger}, [<strong>95% CI: 46.35%–63.85%</strong>]{.text-danger}). The standardized effect size was [<strong>large (Cohen's d = −1.33)</strong>]{.text-success}, indicating that the observed shortfall from the WHO target was substantial rather than merely statistically significant.
 
-```{r}
+### Statistical vs. Practical Significance
 
-wilcox.test(
-  dpt3_coverage_percent ~ region,
-  data = dpt3_coverage
-)
-```
+The large effect size demonstrates that the gap between the observed mean DPT3 coverage and the WHO-recommended target is not only statistically significant but also of considerable public health importance. On average, Nigerian states remain well below the immunization coverage required to achieve and sustain population-level immunity against diphtheria, pertussis, and tetanus.
+
+[<strong>However, important geographic heterogeneity exists.</strong>]{.text-warning} While a few states (e.g., Ebonyi) have already achieved or exceeded the WHO target, several northern states remain far below the recommended threshold. Consequently, the national shortfall reflects marked inequalities in routine immunization performance rather than uniformly poor coverage across all states. These findings underscore the need for targeted immunization strengthening strategies in low-performing states while sustaining gains in states that have already achieved high coverage.
 
 ```{The DPT3 coverage data appear bimodal, reflecting two distinct regional clusters rather than a single approximately normal population.}
 
@@ -291,4 +288,12 @@ Alternative hypothesis (H₁):
   
   The distributions of DPT3 coverage differ between the North and South (location shift ≠ 0).
 
+```
+
+```{r wilcoxon test}
+
+wilcox.test(
+  dpt3_coverage_percent ~ region,
+  data = dpt3_coverage
+)
 ```
