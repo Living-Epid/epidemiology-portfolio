@@ -1,0 +1,575 @@
+---
+title: "Epidemiological Characterization of the 2013 Human Influenza A(H7N9) Outbreak, China: A Field Epidemiology Case Study"
+author: "Taiwo Adegbola"
+format: html
+editor: visual
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+---
+
+## Background
+
+In February 2013, a novel avian-origin influenza A(H7N9) virus emerged as a human pathogen in eastern China, representing the first known instance of human infection with this particular reassortant strain. Unlike H5N1, which had circulated with sporadic human spillover since 1997, H7N9 was genuinely novel to human populations, causing rapidly progressive pneumonia, acute respiratory distress syndrome (ARDS), and substantial mortality among confirmed cases. The outbreak's emergence, rapid geographic spread across multiple Chinese provinces, and demonstrated association with live poultry market exposure made it a landmark case in modern field epidemiology — triggering an internationally coordinated response involving China's National Health and Family Planning Commission, WHO, and international animal health bodies (OIE, FAO), under the One Health framework linking human, animal, and environmental health surveillance.
+
+The outbreak is particularly significant for field epidemiology training because it demonstrates, in real time, several core FETP/EIS competencies: rapid case detection and line-list construction, epidemic curve interpretation, descriptive epidemiology (person-place-time), evaluation of a public health intervention (live poultry market closures) using observational surveillance data, and international risk communication under the WHO International Health Regulations (IHR 2005) framework.
+
+## Objectives
+
+- To characterize the descriptive epidemiology (person, place, time) of confirmed human H7N9 cases in China, February–May 2013.
+- To construct and interpret an epidemic curve to identify outbreak onset, peak, and decline patterns.
+- To assess demographic risk patterns (age and sex distribution) among confirmed cases.
+- To calculate the case fatality proportion and describe the onset-to-outcome interval.
+- To evaluate whether live poultry market closures were temporally associated with a decline in incident cases.
+
+## Public Health Question
+
+What were the temporal, demographic, and geographic patterns of human H7N9 infection during the 2013 outbreak in China, and is there observational evidence that live poultry market closure interventions were associated with outbreak decline?
+
+## Data Source
+
+Kucharski, A., Mills, H., Pinsent, A., Fraser, C., Van Kerkhove, M., Donnelly, C. A., & Riley, S. (2014). Distinguishing between reservoir exposure and human-to-human transmission for emerging pathogens using case onset data. *PLOS Currents Outbreaks*. Data accessed via the `outbreaks` R package (RECON), originally hosted on Data Dryad (doi:10.5061/dryad.2g43n). Real, individual-level line-list data — 136 laboratory-confirmed human H7N9 cases, compiled from ProMed, WHO, FluTrackers, and news/research reports.
+
+## Study Design
+
+Descriptive epidemiological case series / outbreak investigation, using retrospective line-list surveillance data.
+
+## Statistical/Analytical Methods
+
+Epidemic curve construction, descriptive statistics (age, sex, province distribution), case fatality proportion calculation, onset-to-outcome interval analysis, before-after comparison of incidence relative to intervention timing (poultry market closures).
+
+## Public Health Significance
+
+This outbreak directly informed WHO's Pandemic Influenza Preparedness Framework and reinforced the value of One Health surveillance integrating human and animal health data. Understanding whether targeted, evidence-based interventions (market closures) correspond with outbreak decline provides a template for evaluating similar zoonotic spillover events — directly relevant given recurring avian influenza concerns (H5N1, H5N8, and subsequent H7N9 waves in 2016–17) and Nigeria/Africa's own ongoing HPAI (Highly Pathogenic Avian Influenza) surveillance responsibilities under WHO/FAO/OIE tripartite frameworks.
+
+```{r libraries}
+
+library(tidyverse)     # data wrangling + ggplot2
+library(broom)        # tidy model output
+library(rio)          # data import
+library(epitools)    # epi statistics (risk ratios, etc.)
+library(outbreaks)  # real outbreak line-list data
+
+```
+
+```{r import data}
+
+raw_fluH7N9 <- fluH7N9_china_2013
+
+head(raw_fluH7N9)
+
+```
+
+```{r EDA }
+
+dim(raw_fluH7N9)
+names(raw_fluH7N9)
+str(raw_fluH7N9)
+
+```
+
+```{r EDA - inspect missing values}
+
+colSums(is.na(raw_fluH7N9))
+
+```
+
+```{r check and transform age column type}
+library(dplyr)
+
+table(raw_fluH7N9$age, useNA = "always")
+
+fluH7N9 <- raw_fluH7N9 |>
+  mutate(
+    age = as.character(age),
+    age = na_if(age, "?"),
+    age = as.numeric(age)
+  )
+
+
+sum(is.na(h7n9_clean$age))
+summary(fluH7N9$age)
+```
+
+```{r standardized/transform age, sex, and outcome columns}
+
+h7n9_clean <- fluH7N9 |>
+  mutate(
+    case_id = as.character(case_id),
+    gender = factor(gender, levels = c("f","m"), labels = c("Female","Male")),
+    outcome = factor(outcome, levels = c("Death","Recover"), labels = c("Death","Recovered"))
+  )
+
+head(h7n9_clean)
+```
+
+```{r}
+
+h7n9_clean <- h7n9_clean |>
+  mutate(
+    days_onset_to_hosp = as.numeric(date_of_hospitalisation - date_of_onset),          #Onset-to-hospitalization delay
+    
+    days_hosp_to_outcome = as.numeric(date_of_outcome - date_of_hospitalisation),
+    #Hospitalization-to-outcome (length of stay)
+    
+    days_onset_to_outcome = as.numeric(date_of_outcome - date_of_onset)
+    #Onset-to-outcome (total illness duration)
+  )
+
+summary(h7n9_clean$days_onset_to_hosp)
+summary(h7n9_clean$days_hosp_to_outcome)
+summary(h7n9_clean$days_onset_to_outcome)
+```
+
+```{r visualize days from onset to outcome}
+
+ggplot(h7n9_clean, aes(x = days_onset_to_outcome)) +
+  geom_histogram(binwidth = 5, fill = "#1B9E77", colour = "white") +
+  labs(
+    title = "Distribution of Onset-to-Outcome Interval",
+    subtitle = "Human H7N9 cases, China 2013 (n with known outcome dates)",
+    x = "Days from Onset to Outcome",
+    y = "Number of Cases"
+  ) +
+  theme_minimal(base_size = 12)
+
+
+```
+
+```{r create Epi week column}
+
+h7n9_clean <- h7n9_clean |>
+  mutate(epi_week = lubridate::epiweek(date_of_onset))
+
+table(h7n9_clean$epi_week, useNA = "always")
+
+```
+
+```{r create age group column}
+
+h7n9_clean <- h7n9_clean |>
+  mutate(
+    age_group = cut(
+      age,
+      breaks = c(-Inf, 14, 44, 64, Inf),
+      labels = c("0-14", "15-44", "45-64", "65+"),
+      right = TRUE
+    )
+  )
+
+table(h7n9_clean$age_group, useNA = "always")
+```
+
+```{r check for duplicate cases}
+
+sum(duplicated(h7n9_clean$case_id))
+nrow(h7n9_clean) == n_distinct(h7n9_clean$case_id)
+
+```
+
+```{r create an intervention period indicator}
+
+h7n9_clean <- h7n9_clean |>
+  mutate(
+    closure_period = if_else(date_of_onset < as.Date("2013-04-06"), "Before Closure", "After Closure")
+  )
+
+table(h7n9_clean$closure_period, useNA = "always")
+```
+
+```{r create known_outcome column to filter out NAs for interval/CFR analysis}
+
+h7n9_clean <- h7n9_clean |>
+  mutate(known_outcome = !is.na(outcome))
+
+table(h7n9_clean$known_outcome)
+
+```
+
+```{r check for extreme outliers using 50 as the cutoff point from the histogram}
+
+h7n9_clean |> filter(days_onset_to_outcome > 50) |> select(case_id, date_of_onset, date_of_outcome, days_onset_to_outcome, outcome)
+
+nrow(h7n9_clean |> filter(days_onset_to_outcome > 50))
+```
+
+```{r finding the upper fence/outlier threshold statistically according to the Tukey IQR rule }
+
+Q1 <- quantile(h7n9_clean$days_onset_to_outcome, 0.25, na.rm = TRUE)
+Q3 <- quantile(h7n9_clean$days_onset_to_outcome, 0.75, na.rm = TRUE)
+IQR_val <- Q3 - Q1
+upper_bound <- Q3 + 1.5 * IQR_val
+upper_bound
+```
+
+```{r identify the outliers}
+
+h7n9_clean |> 
+  filter(days_onset_to_outcome > 50) |> 
+  select(case_id, date_of_onset, date_of_outcome, days_onset_to_outcome, outcome, age, province)
+```
+
+```{r Descriptive Epidemiology (Place)- case counts by province}
+
+province_summary <-
+  h7n9_clean |>
+  count(province,
+        sort = TRUE)
+
+province_summary
+
+```
+
+```{r place visual}
+
+ggplot(province_summary,
+       aes(x = reorder(province, n),
+           y = n)) +
+  geom_col(fill = "#0072B2") +
+  coord_flip() +
+  labs(
+    title = "Distribution of Human H7N9 Cases by Province",
+    subtitle = "China, February-May 2013 (n = 136)",
+    x = "Province",
+    y = "Number of Cases"
+  ) +
+  theme_classic()
+```
+
+```{r Person: Age Group and Sex Distribution   - Age group table}
+
+
+h7n9_clean |>
+  count(age_group) |>
+  mutate(percent = round(n / sum(n) * 100, 1))
+
+```
+
+```{r Age group visualized}
+
+ggplot(h7n9_clean |> filter(!is.na(age_group)), aes(x = age_group, fill = age_group)) +
+  geom_bar() +
+  scale_fill_manual(values = c("0-14" = "#66C2A5", "15-44" = "#FC8D62", 
+                               "45-64" = "#8DA0CB", "65+" = "#E78AC3")) +
+  labs(
+    title = "H7N9 Confirmed Cases by Age Group",
+    subtitle = "China, February-May 2013",
+    x = "Age Group", y = "Number of Cases"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+
+```
+
+```{r sex distribution}
+
+h7n9_clean |>
+  count(gender) |>
+  mutate(percent = round(n / sum(n) * 100, 1))
+```
+
+```{r Analytical - does age or sex associate with outcome?}
+
+outcome_by_gender <- table(h7n9_clean$gender, h7n9_clean$outcome)
+outcome_by_gender
+chisq.test(outcome_by_gender)
+
+```
+
+```{r Age group vs outcome}
+
+outcome_by_age <- table(h7n9_clean$age_group, h7n9_clean$outcome)
+outcome_by_age
+chisq.test(outcome_by_age)
+
+```
+
+```{r check the expected cell counts -The standard chi-square tests p-value is only accurate when your expected cell counts are large enough (the conventional rule: all expected counts ≥5, or at least 80% of cells ≥5 with none below 1), but our table showed an expected count of 2.42 in the 0-14/Death cell — well below that threshold}
+
+chisq.test(outcome_by_age)$expected
+
+```
+
+```{r Run Fishers exact test instead }
+
+fisher.test(outcome_by_age)
+
+
+```
+
+```{r Case Fatality Proportion}
+
+outcome_table <- table(h7n9_clean$outcome, useNA = "always")
+outcome_table
+
+cfp <- outcome_table["Death"] / (outcome_table["Death"] + outcome_table["Recovered"])
+cfp
+
+```
+
+```{r Add a confidence interval, since this is a proportion}
+
+binom.test(outcome_table["Death"], outcome_table["Death"] + outcome_table["Recovered"])
+```
+
+```{r Intervention Evaluation — Before vs. After Market Closure}
+
+closure_table <- table(h7n9_clean$closure_period, useNA = "always")
+closure_table
+
+
+```
+
+```{r The intervention (closure period) comparison}
+
+h7n9_clean |>
+  filter(!is.na(closure_period)) |>
+  group_by(closure_period) |>
+  summarise(
+    n_cases = n(),
+    period_start = min(date_of_onset),
+    period_end = max(date_of_onset),
+    days = as.numeric(max(date_of_onset) - min(date_of_onset)) + 1,
+    cases_per_day = n_cases / days
+  )
+
+```
+
+```{r plot cases per week, colored by closure period, directly on epi curve}
+
+h7n9_clean |>
+  filter(!is.na(date_of_onset)) |>
+  mutate(week = lubridate::floor_date(date_of_onset, "week")) |>
+  count(week, closure_period) |>
+  ggplot(aes(x = week, y = n, fill = closure_period)) +
+  geom_col() +
+  scale_fill_manual(values = c("Before Closure" = "#D95F02", "After Closure" = "#1B9E77")) +
+  labs(
+    title = "Weekly H7N9 Case Counts, Before vs. After Market Closures",
+    subtitle = "China, 2013",
+    x = NULL, y = "Number of Cases", fill = "Period"
+  ) +
+  theme_minimal(base_size = 12)
+```
+
+```{r  spatial analysis - add a cholopleth map}
+
+install.packages("mapchina")
+library(mapchina)
+library(sf)
+library(dplyr)
+
+china_map <- mapchina::china
+str(china_map)
+
+
+
+```
+
+```{r Build a province code lookup table (standard GB/T 2260 codes)}
+
+province_lookup <- tibble::tibble(
+  Code_Province = c("11","12","13","14","15","21","22","23","31","32","33","34","35",
+                    "36","37","41","42","43","44","45","46","50","51","52","53","54",
+                    "61","62","63","64","65","71","81","82"),
+  province_en = c("Beijing","Tianjin","Hebei","Shanxi","Inner Mongolia","Liaoning","Jilin",
+                  "Heilongjiang","Shanghai","Jiangsu","Zhejiang","Anhui","Fujian","Jiangxi",
+                  "Shandong","Henan","Hubei","Hunan","Guangdong","Guangxi","Hainan","Chongqing",
+                  "Sichuan","Guizhou","Yunnan","Tibet","Shaanxi","Gansu","Qinghai","Ningxia",
+                  "Xinjiang","Taiwan","Hong Kong","Macau")
+)
+
+```
+
+```{r Aggregate counties up to province-level polygons}
+
+china_map_fixed <- china_map |>
+  st_make_valid()
+
+province_map <- china_map_fixed |>
+  group_by(Code_Province) |>
+  summarise(geometry = st_union(geometry)) |>
+  left_join(province_lookup, by = "Code_Province")
+
+province_map |> st_drop_geometry() |> print(n = Inf)
+
+
+```
+
+```{r merge in actual H7N9 case counts}
+
+h7n9_map_data <- province_map |>
+  left_join(province_counts, by = c("province_en" = "province"))
+
+# Replace NA case counts with 0 (provinces with no H7N9 cases)
+h7n9_map_data <- h7n9_map_data |>
+  mutate(n = if_else(is.na(n), 0, n))
+
+```
+
+```{r build the cholopleth}
+
+
+ggplot(h7n9_map_data) +
+  geom_sf(aes(fill = n), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient(low = "#FFF3E0", high = "#D95F02", na.value = "grey90") +
+  labs(
+    title = "Geographic Distribution of H7N9 Confirmed Cases",
+    subtitle = "China, February-May 2013",
+    fill = "Number of\nCases"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), panel.grid = element_blank())
+
+
+```
+
+```{r add labels for the top provinces directly on the map}
+
+library(sf)
+
+# Get centroid coordinates for label placement
+h7n9_map_data <- h7n9_map_data |>
+  mutate(centroid = st_centroid(geometry))
+
+# Extract coordinates for just the top provinces (label only the meaningful ones, avoid clutter)
+top_provinces <- h7n9_map_data |>
+  filter(n >= 4) |>   # only label provinces with a meaningful number of cases
+  mutate(
+    label = paste0(province_en, "\n(n=", n, ")"),
+    coords = st_coordinates(centroid)
+  )
+
+ggplot(h7n9_map_data) +
+  geom_sf(aes(fill = n), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient(low = "#FFF3E0", high = "#D95F02", na.value = "grey90") +
+  geom_sf_text(
+    data = top_provinces,
+    aes(label = label),
+    size = 3, colour = "black", fontface = "bold",
+    lineheight = 0.85
+  ) +
+  labs(
+    title = "Geographic Distribution of H7N9 Confirmed Cases",
+    subtitle = "China, February-May 2013",
+    fill = "Number of\nCases"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(axis.text = element_blank(), axis.ticks = element_blank(), panel.grid = element_blank())
+
+
+```
+
+```{r}
+
+
+install.packages("ggrepel")
+library(ggrepel)
+
+ggplot(h7n9_map_data) +
+  geom_sf(aes(fill = n), colour = "white", linewidth = 0.2) +
+  scale_fill_gradient(low = "#FFF3E0", high = "#D95F02", na.value = "grey90") +
+  geom_text_repel(
+    data = top_provinces,
+    aes(label = label, geometry = centroid),
+    stat = "sf_coordinates",
+    size = 3, colour = "black", fontface = "bold",
+    lineheight = 0.85, min.segment.length = 0,
+    segment.colour = "grey40", segment.size = 0.3,
+    box.padding = 0.5, max.overlaps = Inf
+  ) +
+  labs(
+    title = "Geographic Distribution of H7N9 Confirmed Cases",
+    subtitle = "China, February-May 2013",
+    fill = "Number of\nCases",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+
+
+
+```
+
+## Results
+
+**Descriptive Epidemiology**
+
+Between February 19 and July 27, 2013, 136 laboratory-confirmed human H7N9 cases were reported across 13 provinces/regions in China, with 10 cases missing a recorded date of onset. Cases were heavily concentrated in the Yangtze River Delta region: **Zhejiang** (46 cases, 34%), **Shanghai** (33 cases, 24%), and **Jiangsu** (28 cases, 21%) together accounted for 79% of all confirmed cases, consistent with known live poultry market density in this region.
+
+**Data Completeness**
+
+Following data cleaning, two records had missing age information, while substantial missingness was observed for hospitalization dates (74 records) and outcome dates (65 records), reflecting limitations inherent in routine, real-time surveillance data. Consequently, the case fatality proportion, onset-to-hospitalization interval, and onset-to-outcome interval reported below are based on the subset of cases with complete data for each respective variable, and should be interpreted with this limitation in mind.
+
+**Person**
+
+The median age of confirmed cases was 60 years (IQR: 47.3–72.0 years), with a mean age of 56.9 years, indicating that infections occurred predominantly among older adults. Age group distribution showed: 0–14 years (7 cases), 15–44 years (25 cases), 45–64 years (46 cases), and ≥65 years (56 cases) — the majority of infections therefore occurred among persons aged 45 years and older.
+
+Outcome information was available for 79 patients, comprising 32 deaths and 47 recoveries, corresponding to a case fatality proportion (CFP) of 40.5% (95% CI: 29.6%–52.1%, exact binomial test). No statistically significant association was observed between gender and clinical outcome (Pearson's χ² with Yates' correction = 0.001, p = .981). However, age group was significantly associated with outcome (Pearson's χ² = 9.18, df = 3, p = .027), confirmed by Fisher's Exact Test (p = .025) given small expected cell counts. Mortality proportion increased with age, from 0% (0/6) in the 0–14 group to 48% (14/29) in the 65+ group; the 0–14 estimate should be interpreted cautiously given its very small sample size.
+
+**Place**
+
+Cases were geographically concentrated in eastern China. The provinces reporting the highest number of laboratory-confirmed cases were Zhejiang (46), Shanghai (33), Jiangsu (28), Jiangxi (6), and Fujian (5) — together, Zhejiang, Shanghai, and Jiangsu accounted for the majority of reported infections. The choropleth map demonstrated marked geographic clustering within eastern China, with relatively few cases reported from central provinces and none from most western provinces.
+
+**Time**
+
+The epidemic curve demonstrated a rapid increase in reported cases during March 2013, peaking in early April before gradually declining. Most cases occurred between epidemiologic weeks 13 and 16, after which only sporadic cases were reported.
+
+**Clinical**
+
+Among 79 cases with known outcome (57 unresolved/missing), the case fatality proportion was **40.5% (32/79, 95% CI: 29.6%–52.1%)**. Median onset-to-outcome interval was 20 days (mean 22, range 2–86 days); three cases with markedly prolonged courses (57, 67, and 86 days) were identified as statistical outliers via Tukey's IQR method but retained in the analysis as clinically plausible severe/prolonged critical illness courses, two of which resulted in death.
+
+**Healthcare-Seeking Delays**
+
+Among patients with available hospitalization dates, the median onset-to-hospitalization interval was 4 days (mean 4.8). Among patients with complete outcome dates, the median hospitalization-to-outcome interval was 15.5 days (mean 19.9). The median onset-to-outcome interval was 20 days, indicating prolonged clinical courses among severe infections. Three patients experienced exceptionally long onset-to-outcome intervals (57, 67, and 86 days), identified as statistical outliers via Tukey's IQR method but retained as clinically plausible, given that two of the three resulted in death — consistent with documented potential for prolonged critical illness preceding death in severe H7N9-associated respiratory failure.
+
+**Public Health Intervention Analysis**
+
+Cases were categorized by whether illness onset occurred before or after implementation of live poultry market closure measures.
+
+| Period         | Cases | Observation Days | Cases per Day |
+|----------------|-------|------------------|---------------|
+| Before Closure | 52    | 46               | 1.13          |
+| After Closure  | 74    | 113              | 0.65          |
+
+### Public Health Intervention Analysis
+
+Cases were categorized according to whether illness onset occurred before or after implementation of live poultry market closure measures, comparing the periods before (February 19–April 5) and after (April 6–July 27) the first closures.
+
+| Period         | Cases | Observation Days | Cases per Day |
+|----------------|-------|------------------|---------------|
+| Before Closure | 52    | 46               | 1.13          |
+| After Closure  | 74    | 113              | 0.65          |
+
+Although more cumulative cases were reported after market closure — because surveillance continued for a substantially longer period — average daily incidence declined from 1.13 to 0.65 cases/day, a reduction of approximately 42%. Weekly epidemic curve analysis further revealed that case counts continued to rise for approximately 1–2 weeks immediately following the first closures, with a clear and sustained decline emerging only from late April onward — a pattern consistent with the expected incubation-period lag between exposure reduction and observable case decline.
+
+### Public Health Significance
+
+The 2013 H7N9 outbreak demonstrated the value of rapid, coordinated One Health surveillance linking human case detection with live poultry market intervention — directly informing WHO's Pandemic Influenza Preparedness Framework and reinforcing avian influenza as a persistent pandemic-potential threat. The demonstrated lag between intervention implementation and observable epidemiological effect has direct relevance for how public health authorities communicate expectations to policymakers and the public during active outbreak response — a premature judgment of "the intervention isn't working" during the initial 1–2 week lag period could have led to costly, unnecessary escalation or loss of public confidence. These lessons remain directly relevant to Nigeria and the broader WHO African Region's ongoing HPAI (Highly Pathogenic Avian Influenza) surveillance obligations under the WHO-FAO-OIE Tripartite framework, particularly given recurring avian influenza spillover risk in West African live bird trade systems.
+
+### Recommendations
+
+1.   Maintain and strengthen real-time human-animal health data sharing consistent with One Health surveillance principles, enabling rapid detection of novel zoonotic spillover events.
+
+2.  When evaluating intervention effectiveness during active outbreaks, account explicitly for expected incubation-period lag before concluding an intervention has failed.
+
+3.  Prioritize resolution of pending case outcomes in surveillance reporting systems to minimize missingness bias in case fatality estimates.
+
+4.   Apply similar person-place-time descriptive frameworks routinely in Nigeria's HPAI surveillance, given shared live poultry market transmission dynamics.
+
+5.   Ensure surveillance systems capture complete case dates (onset, hospitalization, outcome) to support robust clinical interval and severity analysis.
+
+## References
+
+- Kucharski, A., Mills, H., Pinsent, A., Fraser, C., Van Kerkhove, M., Donnelly, C. A., & Riley, S. (2014). Distinguishing between reservoir exposure and human-to-human transmission for emerging pathogens using case onset data. *PLOS Currents Outbreaks*.
+
+<!-- -->
+
+- World Health Organization. (2013). *Human infection with avian influenza A(H7N9) virus – update*. WHO Disease Outbreak News.
+
+<!-- -->
+
+- Gao, R., Cao, B., Hu, Y., et al. (2013). Human infection with a novel avian-origin influenza A (H7N9) virus. *New England Journal of Medicine*, 368(20), 1888–1897.

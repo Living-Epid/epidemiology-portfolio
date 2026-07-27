@@ -4,11 +4,6 @@ author: "Taiwo Adegbola"
 format: html
 editor: visual
 date: "`r format(Sys.Date(), '%d %B %Y')`"
-output:
-  html_document:
-    toc: true
-    toc_depth: 3
-    theme: flatly
 ---
 
 ## 1. Background
@@ -234,7 +229,7 @@ Null hypothesis (H₀):
 
 The mean DPT3 vaccination coverage across Nigerian states is equal to the WHO-recommended target of 90%.
 
-                                H1: μ = 90%
+                               g H1: μ = 90%
 
 Alternative hypothesis (H₁):
 

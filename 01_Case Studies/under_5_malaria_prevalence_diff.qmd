@@ -1,0 +1,323 @@
+---
+title: "Urban–Rural Differences in Malaria Prevalence Among Children Under Five in Nigeria: Evidence from the 2023 Nigeria Demographic and Health Survey (NDHS)"
+author: "Taiwo Adegbola"
+format: html
+editor: visual
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+---
+
+## 1. Background
+
+Malaria remains one of the leading causes of morbidity and mortality among children under five in Nigeria, which carries the highest global malaria burden of any single country. Transmission intensity and risk factors for malaria infection differ substantially by residence type — rural areas typically have greater proximity to mosquito breeding sites, lower net (ITN) coverage, reduced access to health facilities, and different housing construction (less screening, more open eaves), while urban areas generally benefit from better infrastructure, drainage, and healthcare access, though rapid unplanned urbanization can create localized high-risk pockets.
+
+Understanding whether malaria prevalence differs meaningfully between urban and rural children is central to Nigeria's National Malaria Elimination Programme (NMEP) planning, as it directly informs where intervention resources — ITN distribution, indoor residual spraying (IRS), seasonal malaria chemoprevention (SMC) — should be prioritized. The **2023 Nigeria Demographic and Health Survey (NDHS)** provides nationally representative malaria testing data that allow this important epidemiologic question to be investigated.
+
+**Problem Statement**
+
+Although Nigeria continues to implement comprehensive malaria control programmes, disparities in malaria burden may persist between urban and rural populations. Identifying whether significant differences exist in malaria prevalence according to place of residence can help policymakers prioritize interventions, allocate resources efficiently, and strengthen malaria control strategies in high-risk communities.
+
+## 2. Objective
+
+To determine whether malaria test positivity among children aged 6–59 months differs significantly by residence type (urban vs. rural), using nationally representative Nigeria Malaria Indicator Survey (MIS) 2021 data.
+
+## 3. Research Question
+
+Is malaria test positivity among children aged 6–59 months significantly associated with place of residence (urban versus rural) in Nigeria?
+
+## 4. Data Source
+
+**Survey:** Nigeria Malaria Indicator Survey (MIS) 2021 — DHS Program
+
+**Datasets:** `NGKR81DT` (Children's Recode), `NGHR81DT` (Household Recode)
+
+**Design:** Nationally representative, stratified, multi-stage cluster sample survey
+
+**Population:** Children aged 6–59 months with a valid malaria test result (RDT and/or microscopy)
+
+## 5. Study Design
+
+Cross-sectional analysis of nationally representative survey data (Nigeria MIS 2021).
+
+**Population:** Children aged 6–59 months residing in surveyed households across Nigeria's 36 states +FCT.
+
+**Exposure:** Type of residence: Urban, Rural
+
+**Outcome:** Malaria test result (positive/negative) — RDT and/or microscopy confirmed
+
+**Categorical (binary)**
+
+## 6. Statistical Method
+
+Chi-square test of independence *(with a note on applying DHS sampling weights, given the complex survey design)*
+
+```{r import libraries}
+
+library(tidyverse)
+library(rio)
+library(broom)
+library(janitor)
+library(gt)
+library(here)
+library(haven)
+```
+
+```{r import dataset}
+
+raw_mis2021 <- rio::import(here("datasets/NGPR81FL.dta"))
+
+#head(raw_mis2021)
+
+#names(raw_mis2021)
+```
+
+```{r exploratory data analysis}
+
+dim(raw_mis2021)
+#str(raw_mis2021)
+
+#head(raw_mis2021)
+```
+
+```{r Create a lookup table from the state labels}
+
+state_lookup <- tibble::tibble(
+  state_code = 1:37,
+  state_name = c("Sokoto","Zamfara","Katsina","Jigawa","Yobe","Borno","Adamawa", 
+                 "Gombe","Bauchi","Kano","Kaduna","Kebbi","Niger","FCT","Nasarawa",                  "Plateau","Taraba","Benue","Kogi","Kwara","Oyo","Osun","Ekiti",                    "Ondo","Edo","Anambra","Enugu","Ebonyi","Cross River","Akwa Ibom",                  "Abia","Imo","Rivers","Bayelsa","Delta","Lagos","Ogun")
+)
+```
+
+```{r select needed variables joining in the state}
+               
+
+mis2021_cleaned <- raw_mis2021 |>
+  select(
+    cluster = hv021,
+    strata = hv023,
+    sample_weight = hv005,
+    state_code = hv024,
+    residence = hv025,
+    sex = hv104,
+    age_months = hc1,
+    malaria_result = hml32
+  ) |>
+  left_join(state_lookup, by = "state_code")
+
+
+#head(mis2021_cleaned)
+```
+
+```{r check labels}
+
+sjlabelled::get_labels(mis2021_cleaned$state_name)      # State/Region
+sjlabelled::get_labels(mis2021_cleaned$residence)       # Residence
+sjlabelled::get_labels(mis2021_cleaned$sex)             # Sex
+sjlabelled::get_labels(mis2021_cleaned$malaria_result)  # Malaria microscopy result
+sjlabelled::get_labels(mis2021_cleaned$strata)          # Strata
+```
+
+```{r check actual counts for malaria_result}
+
+ table(mis2021_cleaned$malaria_result, useNA = "always")
+```
+
+```{r filter to children eligible and tested, scale the sampling weight, and Recode the labelled variables}
+
+
+mis2021_final <- mis2021_cleaned |>
+  
+  filter(age_months >= 6, age_months <= 59, !is.na(malaria_result)) |>
+  
+  mutate(
+    sample_weight = sample_weight / 1000000,
+    
+    malaria_status = factor(malaria_result, levels = c(0,1),
+                            labels = c("Negative","Positive")),
+    
+    residence_cat = factor(residence, levels = c(1,2),
+                            labels = c("Urban","Rural")),
+    
+    sex_cat = factor(sex, levels = c(1,2),
+                            labels = c("Male","Female"))
+  )
+
+
+nrow(mis2021_final)
+
+head(mis2021_final)
+
+```
+
+```{r check structure}
+
+glimpse(mis2021_final)
+```
+
+```{r check missing values}
+
+colSums(is.na(mis2021_final))
+```
+
+```{r verify recoding}
+
+table(mis2021_final$residence)
+
+table(mis2021_final$sex)
+
+table(mis2021_final$malaria_status)
+```
+
+```{r build the survey design object}
+
+library(survey)
+
+mis_design <- svydesign(
+  ids = ~cluster,
+  strata = ~strata,
+  weights = ~sample_weight,
+  data = mis2021_final
+)
+
+summary(mis_design)
+```
+
+```{r Overall malaria prevalence}
+
+svymean(~malaria_status, mis_design)
+
+
+```
+
+```{r Malaria prevalence by residence}
+
+svyby( ~malaria_status, ~residence_cat, mis_design, svymean)
+
+```
+
+```{r Malaria prevalence by sex}
+
+svyby( ~malaria_status, ~sex_cat, mis_design, svymean)
+```
+
+```{r weighted cross-tabulation}
+
+
+svytable(~residence_cat + malaria_status, design = mis_design)
+```
+
+```{r Weighted proportions (properly-weighted, nationally-representative prevalence estimate}
+
+prop.table(svytable(~residence_cat + malaria_status, design = mis_design), margin = 1) * 100
+```
+
+### Statistical Hypotheses
+
+**Null Hypothesis (H₀):**
+
+There is **no association** between place of residence (urban/rural) and malaria infection among children aged 6–59 months in Nigeria.
+
+**Alternative Hypothesis (H₁):**
+
+There **is an association** between place of residence (urban/rural) and malaria infection among children aged 6–59 months in Nigeria.
+
+```{r The weighted chi-square test}
+
+
+svychisq(~residence_cat + malaria_status, design = mis_design)
+
+
+```
+
+```{r 95% confidence interval around the proportions}
+
+svyciprop(~I(malaria_status == "Positive"), 
+          design = subset(mis_design, residence_cat == "Urban"), 
+          method = "logit")
+
+svyciprop(~I(malaria_status == "Positive"), 
+          design = subset(mis_design, residence_cat == "Rural"), 
+          method = "logit")
+```
+
+```{r visualization - Turn the weighted svytable results into a plain data frame }
+
+
+
+weighted_props <- as.data.frame(
+  prop.table(svytable(~residence_cat + malaria_status, design = mis_design), margin = 1) * 100
+)
+
+
+```
+
+```{r visualize- stacked_bar_malaria}
+
+library(ggplot2)
+
+ggplot(weighted_props, aes(x = residence_cat, y = Freq, fill = malaria_status)) +
+  geom_col(position = "fill") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    title = "Weighted Malaria Test Result by Residence",
+    subtitle = "Nationally representative estimates (Nigeria MIS 2021)",
+    x = "Residence",
+    y = "Proportion",
+    fill = "Malaria Result"
+  ) +
+  theme_minimal()
+
+```
+
+## 7. Interpretation
+
+A Rao–Scott adjusted Chi-square test was conducted to examine the association between place of residence (urban/rural) and malaria prevalence among children aged 6-59 months in Nigeria using nationally representative, survey-weighted data from the 2021 Nigeria Malaria Indicator Survey (MIS) (DHS Program; *n* = 10,655). **The weighted prevalence of malaria positivity was substantially higher among children residing in rural areas (26.7%, 95% CI \[24.4%, 29.1%\]) than among those living in urban areas (10.5%, 95% CI \[8.6%, 12.8%\]) (Rao–Scott adjusted F(1, 491) = 84.72, *p* \< 0.001).** The non-overplapping confidence intervals further confrim this difference is unlikely to be due to chance. This corresponds to a **prevalence ratio** of approximately **2.5**, indicating that children living in rural areas were about **2.5** times as likely to test positive for malaria as those living in urban areas. These findings demonstrate a statistically significant and programmatically meaningful association between place of residence and malaria positivity in Nigeria, reinforcing the need for continued prioritization of rural-focused malaria control interventions (ITN -Insecticide Treated Nets -distributions, IRS -Indoor Residual Spraying, SMC- Seasonal Malaria Chemoprevention) within Nigeria's National Malaria Elimination Programme.
+
+## 8. Public Health Significance
+
+The observed urban–rural disparity in malaria prevalence among children aged 6-59 months in Nigeria underscores the importance of place of residence as a key public health consideration in malaria control. The higher prevalence observed in rural areas suggests that malaria prevention programmes, including vector control, prompt diagnosis and treatment, seasonal malaria chemoprevention where appropriate, and community health education, should continue to prioritize rural populations. These findings provide evidence to inform policy decisions regarding the equitable distribution of malaria control resources and the strengthening of interventions in areas with the greatest disease burden.
+
+## 9. References
+
+- National Malaria Elimination Programme (NMEP) \[Nigeria\], National Population Commission (NPC) \[Nigeria\], and ICF. (2022). *Nigeria Malaria Indicator Survey 2021 Final Report*. Abuja, Nigeria, and Rockville, Maryland, USA: NMEP, NPC, and ICF.
+
+<!-- -->
+
+- World Health Organization. (2024). *World Malaria Report 2024*. Geneva: World Health Organization.
+
+<!-- -->
+
+- The DHS Program. *Demographic and Health Surveys Methodology*. ICF International.
+
+## **Explanation on Weighted Sampling Estimates, Strata & Clusters**
+
+**Sampling Weights**
+
+DHS surveys use a **stratified, multi-stage cluster sampling design** (`hv005`) — not a simple random sample of the whole country. In practice, this means certain states, urban/rural areas, or population subgroups may be **deliberately oversampled or undersampled** relative to their true share of the national population (i.e., different population subgroups are sampled at different rates). This is done intentionally, often to ensure smaller states or subgroups have enough sample size to produce statistically reliable prevalence estimates on their own — but it means the *raw* survey sample doesn't proportionally represent Nigeria's actual population composition.
+
+#### Strata — ensuring representation across key subgroups
+
+Before sampling begins, DHS divides the country into **strata** — typically each state crossed with urban/rural status (which is why the `hv023` variable had 76 categories: roughly 37 states × urban/rural). Within each stratum, DHS deliberately draws its own independent sample. This guarantees that **every state and every urban/rural combination is represented** in the final data, rather than leaving it to chance (a pure random sample of Nigeria could, by bad luck, end up with very few respondents from a small state — stratification prevents that).
+
+#### Clusters — accounting for the fact that neighbors are more alike than strangers
+
+DHS doesn't randomly select individual households scattered across the entire country — that would be logistically impossible. Instead, it randomly selects **clusters** (usually villages or enumeration areas — your `hv021`/`cluster` variable, with 567 of them in your data), then samples multiple households *within* each selected cluster.
+
+## **Skills Demonstrated**
+
+- Working with **real, nationally representative Demographic and Health Survey (DHS) microdata**
+
+- Identifying, selecting, and **recoding labelled survey variables**
+
+- Conducting **categorical data analysis** using contingency tables
+
+- Performing the **Rao-Scott adjusted chi-square test**
+
+- Understanding and applying **complex survey design concepts**, including sampling weights
+
+- Explaining why **weighted estimates** provide more accurate national prevalence estimates than unweighted analyses
+
+- Distinguishing **statistical significance** from **public health (programmatic) significance**
+
+- Translating statistical findings into **evidence-based public health recommendations**
+
+## 

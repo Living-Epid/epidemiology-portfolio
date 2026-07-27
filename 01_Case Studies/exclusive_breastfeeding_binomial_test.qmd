@@ -1,0 +1,50 @@
+---
+title: "Nigeria's Exclusive Breastfeeding Prevalence Against the WHO Global Nutrition Target: A Binomial Test Analysis"
+author: "Taiwo Adegbola"
+format: html
+editor: visual
+date: "r format(Sys.Date(), '%d %B %Y')`"
+---
+
+## Background
+
+Exclusive breastfeeding (EBF) — feeding an infant only breast milk for the first 6 months of life, with no other food or water — is recognized by WHO as the single largest potential impact on child mortality of any preventive intervention available. Globally, poor breastfeeding practices, including failure to exclusively breastfeed, contribute to an estimated 11.6% of under-five mortality, and infants who are not exclusively breastfed face substantially higher mortality risk — almost five times greater among those partially breastfed, and more than 14 times greater among those not breastfed at all, compared to exclusively breastfed infants.
+
+In 2012, the World Health Assembly set a global target of at least **50% exclusive breastfeeding prevalence by 2025**. As of 2024, global EBF prevalence reached 48%, nearly meeting this target. In recognition of this progress, the 78th World Health Assembly (2025) adopted a resolution raising the target further, to at least 60% by 2030.
+
+Despite global progress, Nigeria continues to report exclusive breastfeeding rates well below international benchmarks. The 2024 Nigeria Demographic and Health Survey (NDHS) final report found EBF prevalence among children aged 0–5 months, from a sample of 2,734, to stand at **28.8%** — reported by Premium Times Nigeria (October 2025), citing the NDHS 2024 final report.
+
+## WHO Reference Proportion
+
+**50%** — the original WHO/WHA Global Nutrition Target (2025) for exclusive breastfeeding prevalence in the first 6 months of life.
+
+## Public Health Question
+
+Does Nigeria's exclusive breastfeeding prevalence differ significantly from the WHO global nutrition target of 50%?
+
+## Objective
+
+To determine, using a one-sample binomial test, whether Nigeria's observed exclusive breastfeeding prevalence (28.8%, NDHS 2024) is statistically significantly lower than the WHO global target of 50%.
+
+## Data Source
+
+National Population Commission (NPC) \[Nigeria\] & ICF. *Nigeria Demographic and Health Survey 2024 Final Report*. As reported by Premium Times Nigeria (October 2025).
+
+**Sample:** n = 2,734 children aged 0–5 months\
+**Observed EBF prevalence:** 28.8%\
+**Observed count (positive/exclusively breastfed):** approximately 787 (0.288 × 2,734, rounded)
+
+## Study Design
+
+One-sample binomial test (exact), one-tailed (testing whether Nigeria's rate is significantly *lower* than the 50% target).
+
+## Public Health Significance
+
+With exclusive breastfeeding offering the single largest preventive impact on child mortality of any intervention, a confirmed, statistically significant shortfall against the WHO target carries direct implications for Nigeria's under-five mortality burden. This analysis provides an evidence-based framing for World Breastfeeding Week sensitization — translating a national statistic into a clear, quantifiable call to action for maternal and child health stakeholders, health workers, and community members.
+
+```{r libraries}
+
+library(tidyverse)
+library(broom)
+
+```

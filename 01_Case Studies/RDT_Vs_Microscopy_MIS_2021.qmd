@@ -1,0 +1,97 @@
+---
+title: "Diagnostic Accuracy of Rapid Diagnostic Test (RDT) Compared to Microscopy for Malaria Detection Among Children Aged 6–59 Months in Nigeria"
+author: "Taiwo Adegbola"
+format: html
+editor: visual
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+---
+
+## Background
+
+Accurate and timely diagnosis is central to effective malaria case management. WHO's "Test, Treat, Track" (T3) initiative recommends parasitological confirmation of malaria before treatment, rather than presumptive clinical diagnosis based on symptoms alone, to reduce overtreatment, preserve antimalarial drug effectiveness, and correctly identify non-malarial febrile illness requiring alternative management. Two primary diagnostic methods are used across sub-Saharan Africa: **microscopy**, the traditional laboratory-based reference standard requiring trained personnel and functioning equipment, and **Rapid Diagnostic Tests (RDTs)**, point-of-care immunochromatographic tests that detect malaria antigens within minutes and require minimal training.
+
+RDTs have become the dominant diagnostic method at peripheral health facilities across Nigeria and much of Africa, given microscopy's infrastructure and staffing demands. However, RDT performance is known to vary due to factors such as antigen persistence after parasite clearance (causing false positives), low parasite density (causing false negatives), and heat/storage-related test degradation in field conditions. Understanding how well RDT performs against microscopy in real, nationally representative field data — rather than controlled laboratory settings — is essential for national malaria programs relying on RDT as their primary diagnostic tool.
+
+### Objectives
+
+1.  To calculate the sensitivity and specificity of RDT relative to microscopy for malaria detection among Nigerian children aged 6–59 months.
+
+2.  To calculate the positive predictive value (PPV) and negative predictive value (NPV) of RDT in this population.
+
+3.  To assess the level of agreement between RDT and microscopy using the kappa statistic.
+
+4.  To discuss the implications of RDT diagnostic performance for malaria case management policy in Nigeria.
+
+### Public Health Question
+
+How accurately does RDT detect malaria infection compared to microscopy (the reference standard) among Nigerian children aged 6–59 months, using nationally representative survey data?
+
+### Data Source
+
+Nigeria Malaria Indicator Survey (MIS) 2021, DHS Program — variables `hml32` (RDT result) and `hml35` (microscopy result), both measured on the same children. **Fully real, individual-level data** — no simulation required, since both diagnostic methods were performed on the same survey participants.
+
+### Study Design
+
+Diagnostic accuracy (test evaluation) study, cross-sectional, using microscopy as the reference standard against which RDT performance is assessed.
+
+### Statistical Method
+
+2×2 diagnostic contingency table analysis: sensitivity, specificity, positive predictive value, negative predictive value, and Cohen's kappa (agreement statistic), with consideration of Nigeria MIS 2021's complex survey design (weighting) where appropriate.
+
+### Public Health Significance
+
+With RDTs serving as the primary malaria diagnostic tool at most Nigerian health facilities, quantifying their real-world accuracy against the laboratory gold standard has direct implications for treatment policy, drug resource allocation, and confidence in routine surveillance-based prevalence estimates (including the very malaria prevalence figures used in your earlier urban-rural chi-square case study). Findings from this analysis can inform whether current RDT-based diagnostic protocols require supplementary confirmatory testing in specific circumstances, and contribute to the evidence base supporting continued RDT deployment under Nigeria's National Malaria Elimination Programme.
+
+```{r libraries}
+
+
+library(tidyverse)
+library(rio)
+library(broom)
+library(janitor)
+library(gt)
+library(here)
+library(haven)
+
+```
+
+```{r Import malaria dataset}
+
+
+raw_mis2021 <- rio::import(here("datasets/NGPR81FL.dta"))
+
+#head(raw_mis2021)
+
+#names(raw_mis2021)
+
+```
+
+```{r Pull hml35 (microscopy) }
+
+mis2021_diagnostic <- raw_mis2021 |>
+  select(
+    cluster = hv021,
+    strata = hv023,
+    sample_weight = hv005,
+    age_months = hc1,
+    rdt_result = hml32,
+    microscopy_result = hml35
+  ) |>
+  filter(age_months >= 6, age_months <= 59)
+
+```
+
+```{r check both variables -hml32 (RDT result) and hml35 (microscopy result}
+
+table(mis2021_diagnostic$rdt_result, useNA = "always")
+table(mis2021_diagnostic$microscopy_result, useNA = "always")
+
+```
+
+```{r check the codes}
+
+attr(mis2021_diagnostic$microscopy_result, "label")
+
+attr(mis2021_diagnostic$microscopy_result, "labels")
+
+```
