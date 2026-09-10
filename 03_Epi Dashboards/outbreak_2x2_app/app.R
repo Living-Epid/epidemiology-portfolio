@@ -1,3 +1,8 @@
+
+
+
+
+
 # Step 1: Install/load required packages for Project 4
 
 packages <- c(
@@ -15,6 +20,13 @@ if (any(!installed)) {
 }
 
 lapply(packages, library, character.only = TRUE)
+# Explicit library() calls - needed for Connect Cloud to detect dependencies via writeManifest()
+library(shiny)
+library(bslib)
+library(DT)
+library(dplyr)
+library(gt)
+library(epitools)
 
 
 
