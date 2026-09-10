@@ -1,5 +1,5 @@
 # getwd()
-rsconnect::writeManifest()
+# rsconnect::writeManifest()
 # git add app.R manifest.json
 # git commit -m "Add explicit library calls and manifest.json for capstone_sitrep deployment"
 # git push
