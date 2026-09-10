@@ -1,3 +1,11 @@
+# getwd()
+rsconnect::writeManifest()
+# git add app.R manifest.json
+# git commit -m "Add explicit library calls and manifest.json for capstone_sitrep deployment"
+# git push
+
+
+
 # Step 1: Install/load required packages for Project 6 (Capstone)
 
 packages <- c(
@@ -19,6 +27,17 @@ if (any(!installed)) {
 }
 
 lapply(packages, library, character.only = TRUE)
+# Explicit library() calls - needed for Connect Cloud to detect dependencies via writeManifest()
+library(shiny)
+library(bslib)
+library(DT)
+library(dplyr)
+library(lubridate)
+library(scales)
+library(plotly)
+library(leaflet)
+library(gt)
+library(epitools)
 
 
 
