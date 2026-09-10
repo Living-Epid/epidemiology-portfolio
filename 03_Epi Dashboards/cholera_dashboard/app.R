@@ -17,7 +17,18 @@ if (any(!installed)) {
   install.packages(packages[!installed])
 }
 
+
 lapply(packages, library, character.only = TRUE)
+
+# Explicit library() calls - needed for Connect Cloud to detect dependencies via writeManifest()
+library(shiny)
+library(bslib)
+library(DT)
+library(dplyr)
+library(lubridate)
+library(reactable)
+library(scales)
+library(plotly)
 
 
 
